@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 import data_processing as dp
 from flask_cors import CORS
 
-
 app = Flask(__name__)
 CORS(app)
 
@@ -27,6 +26,7 @@ def inscritos():
     carrera = request.args.get('carrera', 'Todas')
     periodo = request.args.get('periodo', None)
     df = dp.filtrar_datos(facultad, carrera, periodo)
+    # Filtramos las filas con _INS numérico
     df = df[df['_INS'].notna() & df['_INS'].apply(lambda x: isinstance(x, (int, float)))]
     df_grouped = df.groupby('LOCALIDAD')['_INS'].sum().reset_index()
     data = df_grouped.to_dict(orient='records')
@@ -38,6 +38,7 @@ def rendimiento():
     carrera = request.args.get('carrera', 'Todas')
     periodo = request.args.get('periodo', None)
     df = dp.filtrar_datos(facultad, carrera, periodo)
+    # Filtramos filas con %APRO numérico
     df = df[df['%APRO'].notna() & df['%APRO'].apply(lambda x: isinstance(x, (int, float)))]
     df_grouped = df.groupby('LOCALIDAD')['%APRO'].mean().reset_index()
     data = df_grouped.to_dict(orient='records')
@@ -49,6 +50,7 @@ def promedios():
     carrera = request.args.get('carrera', 'Todas')
     periodo = request.args.get('periodo', None)
     df = dp.filtrar_datos(facultad, carrera, periodo)
+    # Filtramos filas con PPS numérico
     df = df[df['PPS'].notna() & df['PPS'].apply(lambda x: isinstance(x, (int, float)))]
     df_grouped = df.groupby('LOCALIDAD')['PPS'].mean().reset_index()
     df_grouped['PPS'] = df_grouped['PPS'].round(2)
@@ -83,11 +85,10 @@ def desercion():
     carrera = request.args.get('carrera', 'Todas')
     periodo = request.args.get('periodo', None)
     df = dp.filtrar_datos(facultad, carrera, periodo)
+    # El código original verifica %REPR, ya lo tenemos como %REPR
     if '%REPR' not in df.columns:
-        if 'REPROBADOS' in df.columns:
-            df.rename(columns={'REPROBADOS': '%REPR'}, inplace=True)
-        else:
-            return jsonify({'error': "No se encontró la columna '%REPR' o 'REPROBADOS' en los datos"}), 400
+        return jsonify({'error': "No se encontró la columna '%REPR' en los datos"}), 400
+
     df = df[df['%REPR'].notna() & df['%REPR'].apply(lambda x: isinstance(x, (int, float)))]
     df_grouped = df.groupby('LOCALIDAD')['%REPR'].sum().reset_index()
     data = df_grouped.to_dict(orient='records')
